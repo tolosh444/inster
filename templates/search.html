@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% load static %}
+{% block content %}
+
+<body>
+    <div class="container">
+        <h1>Search Users</h1>
+        <form class="search-form" action="{% url 'search' %}" method="get">
+            <input type="text" class="search-input" name="searched"  placeholder="Search for users..." name="q">
+            <button type="submit" class="search-button">Search</button>
+        </form>
+        {% if searched %}
+        {% for user in users%}
+        <div class="search-results">
+            <div class="user-card">
+                <img src="{{ user.inuser.image.url }}" alt="John Doe" class="user-image">
+                <div class="user-info">
+                <a class="user-name" href="{% url 'user_profile' username=user.username %}" > {{ user.username|title}} </a>
+                <p class="user-location">{{user.inuser.about}}</p>
+                </div>
+            </div>
+        </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+</body>
+
+{% endblock %}

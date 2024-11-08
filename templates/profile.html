@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="content-wrapper">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body text-center">
+                        <img src="{{ user.inuser.image.url }}" alt="{{ user.username|capfirst }}" class="profile-photo" style="width: 150px; height: 150px; object-fit: cover;">
+                        <h5 class="card-title">{{ user.username|capfirst }}</h5>
+                        <p class="card-text"><i class="fas fa-info-circle"></i> {{ user.inuser.about }}</p>
+                        <a href="{% url 'profile-update'%}" class="btn btn-primary"><i class="fas fa-pen"></i> Edit</a>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5 class="card-title">Followers: <span >{{ followers_count }}</span></h5>
+                        
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h5>Following: <span id="follow-count"></span></h5>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                {% include "post_create.html" %}
+
+                {% if user.is_authenticated %}
+                <div id="feed">
+                    {% for post in p_posts %}
+                    <div class="card mb-4 post position-relative">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <img src="{{ post.author.image.url }}" alt="{{ post.author.user.username|capfirst }}" class="profile-picture me-3">
+                                <h5 class="card-title mb-0">{{ post.author.user.username|capfirst }}</h5>
+                            </div>
+                            <p class="card-text">{{ post.content }}</p>
+                            {% if post.post_photo %}
+                            <img src="{{ post.post_photo.url }}" class="img-fluid rounded mb-3 w-100" alt="Post image" style="max-height: 300px;">
+                            {% endif %}
+
+                            <div class="d-flex justify-content-between">
+                                <button class="like-btn btn btn-outline-primary btn-sm" data-post-id="{{ post.id }}">
+                                    {% if request.user in post.likes.all %}
+                                        <i class="fas fa-thumbs-up"></i> ({{ post.total_likes }})
+                                    {% else %}
+                                        <i class="far fa-thumbs-up"></i> ({{ post.total_likes }})
+                                    {% endif %}
+                                </button>
+                            
+                      
+                                {% if request.user == post.author.user %}
+                                <div class="delete-button-container">
+                                    <button class="delete-button" data-id="{{ post.id }}" aria-label="Delete post">x</button>
+                                </div>
+                                {% endif %}
+
+
+                                <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#comments-{{ post.id }}">
+                                    <i class="fas fa-comment"></i> Comments ({{ post.comments.count }})
+                                </button>
+                            </div>
+                        </div>
+                        <div id="comments-{{ post.id }}" class="card-footer collapse">
+                            <div id="comments-list-{{ post.id }}">
+                                {% for comment in post.comments.all %}
+                                <div class="comment p-2 mb-2">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <img src="{{comment.author.image.url}}" alt="{{ comment.author.username }}" class="profile-picture-sm me-2">
+                                        <strong>{{ comment.author.user.username }} - {{ comment.created_at|time:"P" }}</strong>
+                                    </div>
+                                    {{ comment.content }}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        
+                            <!-- Add new comment form -->
+                            <form onsubmit="submitComment({{ post.id }}); return false;">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="comment-input-{{ post.id }}" name="comment" placeholder="Add a comment...">
+                                    <button class="btn btn-outline-primary" type="submit">Send</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-3">
+                <div class="card mb-4">
+                    <div class="card-body ">
+                        <h5 class="card-title">User Statistics</h5>
+                        <p><strong>Posts:</strong> {{ posts_count }}</p>
+                        <p><strong>Likes:</strong> {{ total_likes }}</p>
+                        <p><strong>Comments:</strong> {{  total_comments }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    // JavaScript function to handle profile update via API
+    async function updateProfile() {
+        const formData = new FormData();
+        formData.append('username', document.getElementById('username').value);
+        formData.append('first_name', document.getElementById('first_name').value);
+        formData.append('last_name', document.getElementById('last_name').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('image', document.getElementById('profile_image').files[0]);
+
+        const response = await fetch('update/', {
+            method: 'PUT',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',  // Add the CSRF token to avoid CSRF issues
+            }
+        });
+
+        if (response.ok) {
+            alert('Profile updated successfully');
+        } else {
+            const data = await response.json();
+            alert('Failed to update profile');
+            console.error(data);
+        }
+    }
+
+    // JavaScript function to fetch follow count via API
+    async function fetchFollowCount() {
+        const response = await fetch('follow-count/');
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('follow-count').innerText = data.follow_count;
+        }
+    }
+
+    // Load follow count on page load
+    window.onload = fetchFollowCount;
+</script>
+<script>
+    $(document).ready(function() {
+        $('.like-btn').click(function() {
+            var postId = $(this).data('post-id');
+            var likeBtn = $(this);
+
+            $.ajax({
+                url: "{% url 'like_unlike_post' %}",
+                method: "POST",
+                data: {
+                    'post_id': postId,
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.liked) {
+                        likeBtn.html('<i class="fas fa-thumbs-up"></i> (' + response.total_likes + ')');
+                    } else {
+                        likeBtn.html('<i class="far fa-thumbs-up"></i> (' + response.total_likes + ')');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        });
+    });
+</script>
+<script>
+    // CSRF token setup
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Submit a comment
+    function submitComment(postId) {
+        const content = document.getElementById(`comment-input-${postId}`).value;
+
+        fetch(`/api/posts/${postId}/comment/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                // Add the new comment to the page dynamically
+                document.getElementById(`comments-list-${postId}`).innerHTML += `
+                    <li>${content} - by You</li>
+                `;
+                document.getElementById(`comment-input-${postId}`).value = ''; // Clear input
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+
+    // Submit a reply
+    function submitReply(commentId) {
+        const content = document.getElementById(`reply-input-${commentId}`).value;
+
+        fetch(`/api/comments/${commentId}/reply/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({ content: content })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                // Add the new reply to the page dynamically
+                document.getElementById(`replies-list-${commentId}`).innerHTML += `
+                    <li>${content} - by You</li>
+                `;
+                document.getElementById(`reply-input-${commentId}`).value = ''; // Clear input
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteButtons = document.querySelectorAll('.delete-button');
+    
+        deleteButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const postId = this.getAttribute('data-id');
+                const postElement = document.getElementById(`post-${postId}`);
+    
+                if (confirm('Are you sure you want to delete this post?')) {
+                    fetch(`/posts/${postId}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}',  // Include CSRF token for security
+                            'Authorization': 'Token your_token_here'  // If using token authentication
+                        }
+                    })
+                    .then(response => response.json())  // Parse JSON response
+                    .then(data => {
+                        if (data.message === 'Post deleted successfully') {
+                            // Remove the post from the UI
+                            postElement.remove();
+                            alert(data.message);
+                        } else {
+                            alert('Failed to delete the post.');
+                        }
+                    })
+                                    }
+                                });
+                            });
+                        });
+    </script>
+{% endblock %}

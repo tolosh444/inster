@@ -1,0 +1,24 @@
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Create Post</h5>
+
+        <!-- Add the correct action and method -->
+        <form action="{% url 'create-post' %}" method="post" enctype="multipart/form-data">
+            <!-- CSRF token for security -->
+            {% csrf_token %}
+            
+            <!-- Text area for post content -->
+            <div class="mb-3">
+                <textarea class="form-control" rows="3" name="content" placeholder="What's on your mind?"></textarea>
+            </div>
+            
+            <!-- File input for image upload -->
+            <div class="mb-3">
+                <input type="file" class="form-control" name="post_photo" accept="image/*">
+            </div>
+            
+            <!-- Submit button -->
+            <button type="submit" class="btn btn-primary">Post</button>
+        </form>
+    </div>
+</div>
