@@ -1,0 +1,27 @@
+
+
+services:
+  postgres:
+    container_name: postgres-db-inster
+    image: postgres:13.0-alpine
+    ports:
+      - 5432:5432
+    volumes:
+      - inster_postgres-data:/var/lib/postgresql/data
+    env_file: .env
+
+  web:
+    container_name: inster
+    build: .
+    restart: "always"
+    env_file: ./.env
+    volumes:
+      - ../../:/code
+    ports:
+      - "8000:8000"
+    depends_on:
+      - "postgres"
+    command: bash -c "source /venv/bin/activate &&  python /code/manage.py makemigrations --noinput && python /code/manage.py migrate && python /code/manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  inster_postgres-data:
