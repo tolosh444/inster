@@ -22,7 +22,7 @@ services:
     restart: "always"
     env_file: .env
     environment:
-      - VIRTUAL_HOST=66.666.666.666 # this is example, replace this with your server IP
+      - VIRTUAL_HOST=3.145.217.77 # this is example, replace this with your server IP
       - VIRTUAL_PORT=8000
       - HTTP_PORT=8000
       - STATS_PORT=8001
